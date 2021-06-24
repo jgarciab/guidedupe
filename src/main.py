@@ -41,13 +41,16 @@ class MainWindow(QMainWindow):
         filename = QFileDialog.getOpenFileName(self, "Open File", "", "Data (*.csv *.tsv *.txt *.xlsx)")[0]
         line_edit.setText(filename)
 
+    def read_file(self,filename):
+        return open(filename, encoding="utf-8").read()
+
     def run_csvlink(self):
         #I believe the second field is not needed (fields_names)
         print(self.file1LineEdit.text())
-        self.data_1 = csvhelpers.readData(self.file1LineEdit.text(), "",
+        self.data_1 = csvhelpers.readData(self.read_file(self.file1LineEdit.text()), "",
                                     delimiter=",",
                                     prefix='input_1')
-        self.data_2 = csvhelpers.readData(self.file2LineEdit.text(), "",
+        self.data_2 = csvhelpers.readData(self.read_file(self.file2LineEdit.text()), "",
                                     delimiter=",",
                                     prefix='input_2')
 
