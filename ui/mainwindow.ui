@@ -20,7 +20,7 @@
       <property name="currentIndex">
        <number>0</number>
       </property>
-      <widget class="QWidget" name="gridStackedWidgetPage1">
+      <widget class="QWidget" name="fileSelectionWindow">
        <layout class="QGridLayout" name="gridLayout">
         <item row="3" column="0">
          <spacer name="verticalSpacer">
@@ -71,7 +71,7 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="page">
+      <widget class="QWidget" name="columnViewWindow">
        <layout class="QGridLayout" name="gridLayout_3">
         <item row="3" column="0">
          <widget class="QTableWidget" name="file2DisplayColumn1"/>
