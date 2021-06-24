@@ -50,13 +50,13 @@ class MainWindow(QMainWindow):
     def read_file(self,filename):
         return open(filename, encoding="utf-8").read()
 
-    def run_csvlink(self,delimiter=","):
+    def run_csvlink(self):
         #Read the data
         self.data_1 = csvhelpers.readData(self.read_file(self.file1LineEdit.text()), "",
-                                    delimiter=delimiter,
+                                    delimiter=",",
                                     prefix=None)
         self.data_2 = csvhelpers.readData(self.read_file(self.file2LineEdit.text()), "",
-                                    delimiter=delimiter,
+                                    delimiter=",",
                                     prefix=None)
 
         self.select_columns()
