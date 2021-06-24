@@ -7,30 +7,29 @@ import sys
 import json
 from io import StringIO, open
 
-from . import csvhelpers
+from csvdedupe import csvhelpers
 import dedupe
 
 import itertools
 
 class CSVLink(csvhelpers.CSVCommand):
-    def __init__(self):
+    def __init__(self,filename1,filename2):
         super(CSVLink, self).__init__()
 
-        if len(self.configuration['input']) == 2:
-            try:
-                self.input_1 = open(self.configuration['input'][0], encoding='utf-8').read()
-            except IOError:
-                raise self.parser.error("Could not find the file %s" %
-                                   (self.configuration['input'][0], ))
+        
+        try:
+            self.input_1 = open(filename1, encoding='utf-8').read()
+        except IOError:
+            raise self.parser.error("Could not find the file %s" %
+                                (filename1, ))
 
-            try:
-                self.input_2 = open(self.configuration['input'][1], encoding='utf-8').read()
-            except IOError:
-                raise self.parser.error("Could not find the file %s" %
-                                   (self.configuration['input'][1], ))
+        try:
+            self.input_2 = open(filename2, encoding='utf-8').read()
+        except IOError:
+            raise self.parser.error("Could not find the file %s" %
+                                (filename2, ))
 
-        else:
-            raise self.parser.error("You must provide two input files.")
+        
 
         if 'field_names' in self.configuration:
             if 'field_names_1' in self.configuration or 'field_names_2' in self.configuration:
@@ -53,16 +52,6 @@ class CSVLink(csvhelpers.CSVCommand):
                                       'type': 'String'}
                                      for field in self.field_names_1]
 
-    def add_args(self) :
-        # positional arguments
-        self.parser.add_argument('input', nargs="+", type=str,
-            help='The two CSV files to operate on.')
-        self.parser.add_argument('--field_names_1', type=str, nargs="+",
-            help='List of column names for first dataset')
-        self.parser.add_argument('--field_names_2', type=str, nargs="+",
-            help='List of column names for second dataset')
-        self.parser.add_argument('--inner_join', action='store_true',
-            help='Only return matches between datasets')
 
     def main(self):
 
