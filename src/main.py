@@ -29,16 +29,21 @@ class MainWindow(QMainWindow):
 
         #When the load data button is clicked, run run_csvlink
         self.ui.loadPushButton.clicked.connect(self.run_csvlink)
-        self.ui.loadPushButton.clicked.connect(lambda: self.gridStackedWidget.setCurrentIndex(1))
         
         #Move to the next tab (select columns)
+        self.ui.loadPushButton.clicked.connect(lambda: self.gridStackedWidget.setCurrentIndex(1))
+        self.ui.backPushButton.clicked.connect(lambda: self.gridStackedWidget.setCurrentIndex(0))
+        
+       
 
     def _open_file_dialog(self, line_edit):
+        #Open the file
         filename = QFileDialog.getOpenFileName(self, "Open File", "", "Data (*.csv *.tsv *.txt *.xlsx)")[0]
         line_edit.setText(filename)
 
     def run_csvlink(self):
         #I believe the second field is not needed (fields_names)
+        print(self.file1LineEdit.text())
         self.data_1 = csvhelpers.readData(self.file1LineEdit.text(), "",
                                     delimiter=",",
                                     prefix='input_1')
@@ -46,38 +51,58 @@ class MainWindow(QMainWindow):
                                     delimiter=",",
                                     prefix='input_2')
 
-
+        #TEST to see what it has inside
+        print(self.data_1.values())
+        print(self.data_2.values())
 
     def select_columns(self):
+        #Select column names 
         cols1 = list(self.data_1.values())[0]
         cols2 = list(self.data_2.values())[0]
 
+        #Define boxes
+        boxes1 = [self.file1SelectColumn1,self.file1SelectColumn2,self.file1SelectColumn3]
+        boxes2 = [self.file2SelectColumn1,self.file2SelectColumn2,self.file2SelectColumn3]
 
+        #Set up the options (columns)
+        for box in boxes1:        
+            box.addItems(cols1)
+        for box in boxes2:        
+            box.addItems(cols2)
+
+        #When continue is clicked
+        self.ui.continuePushButton.clicked.connect(self.define_field_names)
+
+    def define_field_names(self):
         #Cols in data1
-        #self.field_names_1
+        self.field_names_1 = [_.text for _ in boxes1 if _.text != ""]
+        self.field_names_2 = [_.text for _ in boxes2 if _.text != ""]
         
-        #Cols in data2
-        #self.field_names_2
-        # if self.field_names_1 != self.field_names_2:
-        #     for record_id, record in data_2.items():
-        #         remapped_record = {}
-        #         for new_field, old_field in zip(self.field_names_1,
-        #                                         self.field_names_2):
-        #             remapped_record[new_field] = record[old_field]
-        #         data_2[record_id] = remapped_record
+        #Remap columns if necesarry
+        if self.field_names_1 != self.field_names_2:
+            for record_id, record in data_2.items():
+                remapped_record = {}
+                for new_field, old_field in zip(self.field_names_1,
+                                                self.field_names_2):
+                    remapped_record[new_field] = record[old_field]
+                data_2[record_id] = remapped_record
 
-    #Move to the next tab (select columns)
+        #Move to the next tab (straomomg)
+        self.ui.loadPushButton.clicked.connect(lambda: self.gridStackedWidget.setCurrentIndex(2))
+        
     
     def training(self):
+        # Start up dedupe
         deduper = dedupe.RecordLink(self.field_definition)
 
+        # Speed up by finding identical matches
         fields = {variable.field for variable in deduper.data_model.primary_fields}
         (nonexact_1,
             nonexact_2,
-            exact_pairs) = exact_matches(data_1, data_2, fields)
+            exact_pairs) = self.exact_matches(data_1, data_2, fields)
 
         # Set up our data sample
-        logging.info('taking a sample of %d possible pairs', self.sample_size)
+        #TODO display logging.info('taking a sample of %d possible pairs', self.sample_size)
         deduper.sample(nonexact_1, nonexact_2, self.sample_size)
 
         # Perform standard training procedures
@@ -97,24 +122,45 @@ class MainWindow(QMainWindow):
 
         #TODO display logging.info('# duplicate sets %s' % len(clustered_dupes))
 
+        #Save the file to the downloads folder (TODO: Ask where to save it)
+        self.download_file(clustered_dupes)
 
-    def download_file(self):
-        #write_function = csvhelpers.writeLinkedResults
-        # write out our results
+    def download_file(self,clustered_dupes):
+        #Select folder
 
-        # if self.output_file:
-        #     if sys.version < '3' :
-        #         with open(self.output_file, 'wb', encoding='utf-8') as output_file:
-        #             write_function(clustered_dupes, self.input_1, self.input_2,
-        #                            output_file, self.inner_join)
-        #     else :
-        #         with open(self.output_file, 'w', encoding='utf-8') as output_file:
-        #             write_function(clustered_dupes, self.input_1, self.input_2,
-        #                            output_file, self.inner_join)
-        # else:
-        #     write_function(clustered_dupes, self.input_1, self.input_2,
-        #                    sys.stdout, self.inner_join)
-        pass     
+
+        #Select filename
+
+        write_function = csvhelpers.writeLinkedResults
+        with open(self.output_file, 'w', encoding='utf-8') as output_file:
+                    write_function(clustered_dupes, self.input_1, self.input_2,
+                                   "~/Downloads/output_dedupe.csv", False)
+      
+
+def exact_matches(data_1, data_2, match_fields):
+    nonexact_1 = {}
+    nonexact_2 = {}
+    exact_pairs = []
+    redundant = {}
+
+    for key, record in data_1.items():
+        record_hash = hash(tuple(record[f] for f in match_fields))
+        redundant[record_hash] = key        
+
+    for key_2, record in data_2.items():
+        record_hash = hash(tuple(record[f] for f in match_fields))
+        if record_hash in redundant:
+            key_1 = redundant[record_hash]
+            exact_pairs.append(((key_1, key_2), 1.0))
+            del redundant[record_hash]
+        else:
+            nonexact_2[key_2] = record
+
+    for key_1 in redundant.values():
+        nonexact_1[key_1] = data_1[key_1]
+        
+    return nonexact_1, nonexact_2, exact_pairs
+
 
 if __name__ == "__main__":
     app = QApplication([])
