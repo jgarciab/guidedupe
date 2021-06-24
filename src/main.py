@@ -10,9 +10,12 @@ class MainWindow(QMainWindow):
         loader = QUiLoader()
         self.ui = loader.load("ui/mainwindow.ui", None)
         self.ui.show()
-        
-        self.file1PushButton = self.ui.file1PushButton
-        self.file2PushButton = self.ui.file2PushButton
+
+        file1PushButton = self.ui.file1PushButton
+        file2PushButton = self.ui.file2PushButton
+
+        file1LineEdit = self.ui.file1LineEdit
+        file2LineEdit = self.ui.file2LineEdit
 
     def _open_file_dialog(self, line_edit):
         filename = QFileDialog.getOpenFileName(self, tr("Open File"), "~", tr(""))
@@ -24,3 +27,4 @@ if __name__ == "__main__":
 
     # Start the event loop
     sys.exit(app.exec())
+
