@@ -34,7 +34,13 @@ class MainWindow(QMainWindow):
         self.ui.loadPushButton.clicked.connect(lambda: self.gridStackedWidget.setCurrentIndex(1))
         self.ui.backPushButton.clicked.connect(lambda: self.gridStackedWidget.setCurrentIndex(0))
         
-       
+        #When continue is clicked
+        self.ui.continuePushButton.clicked.connect(self.define_field_names)
+        self.ui.continuePushButton.clicked.connect(lambda: self.gridStackedWidget.setCurrentIndex(2))
+    
+        # self.ui.file1SelectColumn1.currentTextChanged()
+        # self.ui.file1SelectColumn2.currentTextChanged()
+        # self.ui.file1SelectColumn3.currentTextChanged()
 
     def _open_file_dialog(self, line_edit):
         #Open the file
@@ -44,54 +50,48 @@ class MainWindow(QMainWindow):
     def read_file(self,filename):
         return open(filename, encoding="utf-8").read()
 
-    def run_csvlink(self):
-        #I believe the second field is not needed (fields_names)
-        print(self.file1LineEdit.text())
+    def run_csvlink(self,delimiter=","):
+        #Read the data
         self.data_1 = csvhelpers.readData(self.read_file(self.file1LineEdit.text()), "",
-                                    delimiter=",",
-                                    prefix='input_1')
+                                    delimiter=delimiter,
+                                    prefix=None)
         self.data_2 = csvhelpers.readData(self.read_file(self.file2LineEdit.text()), "",
-                                    delimiter=",",
-                                    prefix='input_2')
+                                    delimiter=delimiter,
+                                    prefix=None)
 
-        #TEST to see what it has inside
-        print(self.data_1.values())
-        print(self.data_2.values())
+        self.select_columns()
 
     def select_columns(self):
         #Select column names 
-        cols1 = list(self.data_1.values())[0]
-        cols2 = list(self.data_2.values())[0]
+        cols1 = list(list(self.data_1.values())[0].keys())
+        cols1 = [_ for _ in cols1 if _ != "unique_id" ]
+        cols2 = list(list(self.data_2.values())[0].keys())
+        cols2 = [_ for _ in cols2 if _ != "unique_id" ]
 
         #Define boxes
-        boxes1 = [self.file1SelectColumn1,self.file1SelectColumn2,self.file1SelectColumn3]
-        boxes2 = [self.file2SelectColumn1,self.file2SelectColumn2,self.file2SelectColumn3]
+        self.boxes1 = [self.ui.file1SelectColumn1,self.ui.file1SelectColumn2,self.ui.file1SelectColumn3]
+        self.boxes2 = [self.ui.file2SelectColumn1,self.ui.file2SelectColumn2,self.ui.file2SelectColumn3]
 
         #Set up the options (columns)
-        for box in boxes1:        
+        for box in self.boxes1:        
             box.addItems(cols1)
-        for box in boxes2:        
-            box.addItems(cols2)
-
-        #When continue is clicked
-        self.ui.continuePushButton.clicked.connect(self.define_field_names)
+        for box in self.boxes2:        
+            box.addItems(cols2)        
 
     def define_field_names(self):
         #Cols in data1
-        self.field_names_1 = [_.text for _ in boxes1 if _.text != ""]
-        self.field_names_2 = [_.text for _ in boxes2 if _.text != ""]
+        self.field_names_1 = [_.currentText() for _ in self.boxes1 if _.currentText() != ""]
+        self.field_names_2 = [_.currentText() for _ in self.boxes2 if _.currentText() != ""]
         
         #Remap columns if necesarry
         if self.field_names_1 != self.field_names_2:
-            for record_id, record in data_2.items():
+            for record_id, record in self.data_2.items():
                 remapped_record = {}
                 for new_field, old_field in zip(self.field_names_1,
                                                 self.field_names_2):
                     remapped_record[new_field] = record[old_field]
-                data_2[record_id] = remapped_record
+                self.data_2[record_id] = remapped_record
 
-        #Move to the next tab (straomomg)
-        self.ui.loadPushButton.clicked.connect(lambda: self.gridStackedWidget.setCurrentIndex(2))
         
     
     def training(self):
@@ -130,8 +130,6 @@ class MainWindow(QMainWindow):
 
     def download_file(self,clustered_dupes):
         #Select folder
-
-
         #Select filename
 
         write_function = csvhelpers.writeLinkedResults
@@ -140,29 +138,29 @@ class MainWindow(QMainWindow):
                                    "~/Downloads/output_dedupe.csv", False)
       
 
-def exact_matches(data_1, data_2, match_fields):
-    nonexact_1 = {}
-    nonexact_2 = {}
-    exact_pairs = []
-    redundant = {}
+    def exact_matches(data_1, data_2, match_fields):
+        nonexact_1 = {}
+        nonexact_2 = {}
+        exact_pairs = []
+        redundant = {}
 
-    for key, record in data_1.items():
-        record_hash = hash(tuple(record[f] for f in match_fields))
-        redundant[record_hash] = key        
+        for key, record in data_1.items():
+            record_hash = hash(tuple(record[f] for f in match_fields))
+            redundant[record_hash] = key        
 
-    for key_2, record in data_2.items():
-        record_hash = hash(tuple(record[f] for f in match_fields))
-        if record_hash in redundant:
-            key_1 = redundant[record_hash]
-            exact_pairs.append(((key_1, key_2), 1.0))
-            del redundant[record_hash]
-        else:
-            nonexact_2[key_2] = record
+        for key_2, record in data_2.items():
+            record_hash = hash(tuple(record[f] for f in match_fields))
+            if record_hash in redundant:
+                key_1 = redundant[record_hash]
+                exact_pairs.append(((key_1, key_2), 1.0))
+                del redundant[record_hash]
+            else:
+                nonexact_2[key_2] = record
 
-    for key_1 in redundant.values():
-        nonexact_1[key_1] = data_1[key_1]
-        
-    return nonexact_1, nonexact_2, exact_pairs
+        for key_1 in redundant.values():
+            nonexact_1[key_1] = data_1[key_1]
+            
+        return nonexact_1, nonexact_2, exact_pairs
 
 
 if __name__ == "__main__":
